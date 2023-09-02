@@ -4,6 +4,32 @@
 import axios from "axios";
 import Swal from "sweetalert2";
 
+// // let lastTime = 0;
+// // const interval = 500; // Rate limit to run every 500 milliseconds
+
+// // const start = performance.now();
+// // window.counter = () => {
+// //   const currentTime = performance.now();
+// //   let calculatedValue = null;
+  
+// //   if (currentTime - lastTime >= interval) {
+// //     // console.log('Executing main logic');
+// //     calculatedValue = currentTime - start + currentTime + 1000.0178;
+   
+// //     sessionStorage.setItem("RandomUniqueID", calculatedValue);
+
+// //     lastTime = currentTime;
+// //   }
+
+// //   requestAnimationFrame(window.counter);
+// //   return calculatedValue;
+// };
+
+
+// window.counter();
+
+
+
 window.RandomUniqueID = (callback) => {
   setInterval(() => {
     const randomNumbers = Math.floor(Math.random() * 1000000)

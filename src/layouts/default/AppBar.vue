@@ -66,6 +66,10 @@
           <v-list-item link to="/MgtProvinces">
             <v-list-item-title>Provinces</v-list-item-title>
           </v-list-item>
+
+          <v-list-item link to="/MgtDistricts">
+            <v-list-item-title>Districts</v-list-item-title>
+          </v-list-item>
           <!-- More sublinks here -->
         </v-list>
         <!-- Repeat the pattern for other menu items -->

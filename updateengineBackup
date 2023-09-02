@@ -201,41 +201,33 @@ export default {
     getFieldValue(fieldName) {
       return this.record[fieldName] || ""; // Return the value from the record, or an empty string if not found
     },
-    async fetchFields() {
-  try {
-    const response = await axios.post(`${SERVER_URL}fetchFields`, {
-      formId: this.formId
-    });
+    async fetchColumns() {
+      try {
+        const response = await axios.post(`${SERVER_URL}getColumnDetails`, {
+          tableName: this.tableName,
+          excludedColumns: this.excludedColumns,
+        });
 
-    let fields = response.data.fieldData;
+        let columns = response.data.columnData;
 
-    if (Array.isArray(fields)) {
-      fields = fields.map(field => {
-        if (field.type === 'autocomplete') {
-          // Search for an autocomplete field matching the field name
-          const autoCompleteField = this.autoCompleteData.find(el => el.name === field.name);
+        if (Array.isArray(columns)) {
+          columns = columns.filter(
+            (col) =>
+              col.name !== "created_at" &&
+              col.name !== "updated_at" &&
+              !col.name.includes("ID") &&
+              !this.excludedColumns.includes(col.name) &&
+              !this.isAutoCompleteColumn(col.name)
+          );
 
-          // If found, add options
-          if (autoCompleteField) {
-            return {
-              ...field,
-              options: autoCompleteField.data
-            };
-          }
+          this.chunks = this.chunkArray(columns, 3);
+        } else {
+          console.error("Received data is not an array");
         }
-        // If not found or if not an autocomplete field, return the field as is
-        return field;
-      });
-
-      this.fields = fields;
-    } else {
-      console.error("Received data is not an array");
-    }
-  } catch (error) {
-    console.error(error);
-  }
-},
-
+      } catch (error) {
+        console.error(error);
+      }
+    },
     isAutoCompleteColumn(columnName) {
       return (
         Array.isArray(this.autoCompleteData) &&

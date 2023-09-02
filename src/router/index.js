@@ -12,8 +12,14 @@ const routes = [
         name: "MgtProvinces",
         component: () => import("@/admin/Provinces/MgtProvinces.vue"),
       },
+      {
+        path: "MgtDistricts",
+        name: "MgtDistricts",
+        component: () => import("@/admin/Provinces/MgtDistricts.vue"),
+      },
       // Other child routes go here
     ],
+    
   },
 ];
 

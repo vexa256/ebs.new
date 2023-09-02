@@ -1,7 +1,7 @@
 import axios from "axios";
 import Swal from "sweetalert2";
-window.SERVER_URL = "http://172.19.194.87:8000/api/";
-window.ASSET_URL = "http://172.19.194.87:8000/";
+window.SERVER_URL = "http://172.28.212.175:8000/api/";
+window.ASSET_URL = "http://172.28.212.175:8000/";
 
 window.COLORS = [
   "#2196F3",

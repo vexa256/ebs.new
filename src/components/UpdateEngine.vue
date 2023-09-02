@@ -80,6 +80,7 @@
                   class="delete-button DeleteMe"
                   :data-id="record.id"
                   :data-tablename="tableName"
+                  @click="deleteRecord(record.id, tableName)"
                 >
                   <v-icon>mdi-delete</v-icon> Delete
                 </v-btn>
@@ -94,24 +95,56 @@
     </v-card>
   </v-dialog>
 
-  <v-dialog v-model="editModal" fullscreen>
+  <!-- <v-dialog v-model="editModal" fullscreen>
     <edit-component
       :record-id="selectedRecordId"
       :table-name="tableName"
       @close="closeEditModal"
     ></edit-component>
-  </v-dialog>
+  </v-dialog> -->
+
+  <v-dialog v-model="showUpdateForm" fullscreen>
+  <v-toolbar dark color="primary">
+    <v-btn icon dark @click="showUpdateForm = false">
+      <v-icon>mdi-close</v-icon>
+    </v-btn>
+    <v-toolbar-title>Update Data</v-toolbar-title>
+    <v-spacer></v-spacer>
+    <v-toolbar-items> </v-toolbar-items>
+  </v-toolbar>
+  <v-card class="shadow-lg enhanced-container">
+    <UpdateForm
+      :tableName="UpdateTableName"
+      :FormID="FormID"
+      :excludedColumns="excludedColumns"
+      :formDivId="formDivId"
+      :props="{ id: id }"
+      :selectElements="selectElements"
+      :autoCompleteData="autoCompleteData"
+      :hiddenFields="hiddenFields"
+    ></UpdateForm>
+  </v-card>
+  <v-card-actions>
+    <v-btn icon @click="showUpdateForm = false">
+      <v-icon>mdi-close</v-icon>
+    </v-btn>
+  </v-card-actions>
+</v-dialog>
+
 </template>
 
-<script lang="ts">
+<script>
 import { defineComponent } from "vue";
 import axios from "axios";
 import Swal from "sweetalert2";
-import EditComponent from "@/components/UpdateForm.vue"; // Update the path to the correct file location
+// import EditComponent from "@/components/UpdateForm.vue"; // Update the path to the correct file location
+
+import UpdateForm from "@/components/UpdateForm.vue";
 
 export default defineComponent({
   components: {
-    EditComponent,
+    // EditComponent,
+    UpdateForm,
   },
   props: {
     RecordID: {
@@ -149,17 +182,51 @@ export default defineComponent({
   },
   data() {
     return {
+      dialog: false,
+      notifications: false,
+      sound: true,
+      widgets: false,
       records: [],
       searchTerm: "",
       sliderValue: 0,
       ViewModal: false,
       editModal: false,
+      UpdateTableName: "false",
       selectedRecordId: null,
+      showUpdateForm: false,
+      id: 0,
+      // tableName: 'your_table_name',
+      FormID: "UpdateDiveID",
+      // excludedColumns: ['column1', 'column2'],
+      formDivId: "UpdateDiveID",
+      RecordUpdateID: null,
+      selectElements: [
+        /* your array of select elements */
+      ],
+      autoCompleteData: [
+        /* your array or object for autocomplete data */
+      ],
+      hiddenFields: [
+      // {
+      //   name: "created_at",
+      //   value: new Date().toISOString().slice(0, 19).replace("T", ""),
+      // },
+      // {
+      //   name: "ProvinceID",
+      //   value: 222,
+      // },
+      { name: "id", value:   this.id},
+      { name: "PostRoute", value: "MassUpdate" },
+      { name: "TableName", value: this.tableName },
+    ],
     };
   },
   watch: {
     viewDataModal: function () {
       this.ViewModal = true;
+      
+
+      // console.log('The is is '+sessionStorage.getItem("ViewSelectedRecordID"));
     },
   },
   computed: {
@@ -187,6 +254,7 @@ export default defineComponent({
       };
     },
   },
+
   methods: {
     CloseModal() {
       this.ViewModal = false;
@@ -204,10 +272,82 @@ export default defineComponent({
         .replace(/_/g, " ")
         .trim();
     },
-    updateRecord(id, tableName) {
-      this.selectedRecordId = id;
-      this.ViewModal = false; // Close the current dialog
-      this.editModal = true; // Open the edit dialog
+    async updateRecord(id, tableName) {
+      try {
+        sessionStorage.setItem("record_id", id);
+        // Wait for the id to be saved in session storage
+        await new Promise((resolve, reject) => {
+          try {
+        
+            sessionStorage.setItem("record_id", id);
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+
+       
+
+        });
+
+        // Proceed with the rest of the code only after the id has been saved
+        this.selectedRecordId = id;
+        this.id = id;
+        this.RecordUpdateID = id;
+        this.UpdateTableName = tableName;
+        this.ViewModal = false; // Close the view modal
+        this.showUpdateForm = true; // Open the update form
+        console.log("UpdateID" + id + " tablename " + tableName);
+      } catch (error) {
+        // Handle or log any errors here
+        console.error("Failed to save ID to session storage:", error);
+      }
+    },
+    async deleteRecord(id, tableName) {
+      // Show Swal dialog to ask for user confirmation
+      const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete it!'
+      });
+
+      // If user confirms, proceed with deletion
+      if (result.isConfirmed) {
+        try {
+          const response = await axios.post(window.SERVER_URL + 'MassDelete', {
+            TableName: tableName,
+            id: id,
+          });
+
+          // If deletion was successful, show a success message
+          if (response.status === 200) {
+            Swal.fire(
+              'Deleted!',
+              'Your record has been deleted.',
+              'success'
+            );
+            // Refresh your records or remove the deleted record from the state
+            await this.fetchAndDisplayData(); // Assuming this is your method to refresh records
+          } else {
+            Swal.fire(
+              'Failed!',
+              'Failed to delete the record.',
+              'error'
+            );
+          }
+
+        } catch (error) {
+          console.error("Error deleting record:", error);
+          Swal.fire(
+            'Failed!',
+            'Failed to delete the record.',
+            'error'
+          );
+        }
+      }
     },
     async fetchAndDisplayData() {
       try {
@@ -215,14 +355,14 @@ export default defineComponent({
           data: { records },
         } = await axios.post(`${this.serverUrl}FetchSpecificRecords`, {
           TableName: this.tableName,
-          id: this.RecordID || this.provinceId,
+          id: sessionStorage.getItem("ViewSelectedRecordID"),
           excludedColumns: this.excludedColumns,
         });
         if (!Array.isArray(records) || records.length === 0)
           throw "Invalid or empty records";
         this.records = records;
       } catch (error) {
-        console.error("Error fetching records:", error);
+        // console.log("Error fetching records: or record deleted", error);
       }
     },
   },
@@ -230,7 +370,15 @@ export default defineComponent({
     await this.fetchAndDisplayData();
   },
   mounted() {
-    // You can add further lifecycle logic here if needed
+    this.editModal = false;
+    this.intervalId = setInterval(() => {
+      this.fetchAndDisplayData();
+      // console.log('ran');
+    }, 500);
+
+    
+  },beforeUnmount() {
+    clearInterval(this.intervalId); // clear the interval when the component is destroyed
   },
 });
 </script>

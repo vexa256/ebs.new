@@ -3,7 +3,7 @@
     <v-col cols="12" md="6" lg="4">
       <v-card class="mx-auto">
         <v-card-item class="bg-red">
-          <v-card-title>Manage Provinces</v-card-title>
+          <v-card-title>Manage Districts</v-card-title>
           <template v-slot:append>
             <v-btn
               color="indigo"
@@ -16,7 +16,7 @@
         <v-text-field
           v-model="search"
           prepend-inner-icon="mdi-magnify"
-          label="Search for Provinces"
+          label="Search for Districts"
         ></v-text-field>
         <v-divider></v-divider>
         <v-virtual-scroll
@@ -34,7 +34,7 @@
                 </v-avatar>
               </template>
               <v-list-item-title style="font-size: 12px"
-                >{{ item.ProvinceName }}
+                >{{ item.districtName }}
               </v-list-item-title>
               <template v-slot:append>
                 <v-icon @click="showViewData(item.id)" class="btn-sm" color="red" end
@@ -48,13 +48,13 @@
     </v-col>
   </v-row>
   <v-row justify="center">
-    <form id="SubmitProvinceForm" method="POST">
+    <form id="SubmitdistrictForm" method="POST">
       <v-dialog v-model="dialog" persistent fullscreen>
         <v-card class="d-flex flex-column" style="height: 100%">
           <v-card-title>
             <span class="text-h5">
               <v-icon class="mx-1" color="red" end>mdi-plus</v-icon>
-              Add Province</span
+              Add district</span
             >
           </v-card-title>
           <v-card-text class="flex-grow-1" style="overflow-y: auto">
@@ -85,10 +85,10 @@
 
   <UpdateEngine
     :RecordID="viewDataID"
-    :provinceId="someProvinceId"
+    :districtId="somedistrictId"
     :tableName="tableName"
     :excludedColumns="excludedColumns"
-    :titleColumnName="'ProvinceName'"
+    :titleColumnName="'districtName'"
     :ignoredColumns="['created_at', 'updated_at']"
     :serverUrl="SERVER_URL"
     v-if="viewDataModal"
@@ -111,7 +111,7 @@ export default {
   data: () => ({
     viewDataID: null,
     SERVER_URL: window.SERVER_URL,
-    someProvinceId: "provinceIdValue", // Provide the appropriate value
+    somedistrictId: "districtIdValue", // Provide the appropriate value
 
     viewDataModal: false,
     timestamp: new Date().toISOString().slice(0, 19).replace("T", " "),
@@ -120,29 +120,21 @@ export default {
       return characters.charAt(Math.floor(Math.random() * characters.length));
     }).join(""),
     colors: window.COLORS,
-    provinces: [],
-    FormID: "SubmitProvinceForm",
+    Districts: [],
+    FormID: "SubmitdistrictForm",
     search: "",
     error: null,
     lastLoadedIndex: 50,
     dialog: false,
-    tableName: "provinces",
-    excludedColumns: ["created_at", "ProvinceID"],
+    tableName: "districts",
+    excludedColumns: ["created_at", "DistrictID", 'updated_at'],
     colGridSystem: { xs: 12, sm: 6, md: 4, lg: 3 },
     selectData: Object,
     selectElements: [], // You can add select elements if needed
     autoCompleteData: [
       {
-        name: "city",
-        data: ["New York", "Los Angeles", "Chicago"],
-      },
-      {
-        name: "country",
-        data: ["USA", "Canada", "Mexico"],
-      },
-      {
-        name: "language",
-        data: ["English", "Spanish", "French"],
+        name: "ProvinceID",
+        data: [], // Initially empty
       },
     ],
     hiddenFields: [
@@ -151,23 +143,41 @@ export default {
         value: new Date().toISOString().slice(0, 19).replace("T", ""),
       },
       {
-        name: "ProvinceID",
+        name: "DistrictID",
         value: 222,
       },
       { name: "PostRoute", value: "MassInsert" },
-      { name: "TableName", value: "provinces" },
+      { name: "TableName", value: "districts" },
     ],
   }),
 
   created() {
+    this.fetchDistricts();
     this.fetchProvinces();
-    this.intervalId = setInterval(this.fetchProvinces, 2000); // 2000 ms = 2 seconds
+
+    this.intervalId = setInterval(this.fetchDistricts, 2000); // 2000 ms = 2 seconds
 
     console.log(sessionStorage.getItem("RandomUniqueID"));
   },
 
   mounted() {
-    this.updateProvinceID();
+    this.updatedistrictID();
+    this.fetchProvinces();
+
+    const intervalId = setInterval(() => {
+      this.$nextTick(() => {
+        const labels = document.querySelectorAll('.v-label.v-field-label');
+        labels.forEach((label) => {
+          if (label.textContent.trim() === 'Province I D') {
+            label.textContent = 'Select Province Name';
+          }
+        });
+      });
+    }, 1000); // Runs every 1 second
+
+    // setTimeout(() => {
+    //   clearInterval(intervalId); // Stops the interval after 7 seconds
+    // }, 7000);
   },
 
   watch: {
@@ -179,17 +189,14 @@ export default {
   computed: {
     filteredItems() {
       return this.search
-        ? this.provinces
-            .filter((p) => p.fullName.toLowerCase().includes(this.search.toLowerCase()))
-            .slice(0, this.lastLoadedIndex)
-        : this.provinces.slice(0, this.lastLoadedIndex);
+        ? this.Districts.filter((p) =>
+            p.fullName.toLowerCase().includes(this.search.toLowerCase())
+          ).slice(0, this.lastLoadedIndex)
+        : this.Districts.slice(0, this.lastLoadedIndex);
     },
   },
 
   methods: {
-
-    
-  
     showViewData(id) {
       return new Promise((resolve, reject) => {
         console.log(id);
@@ -217,28 +224,59 @@ export default {
       });
     },
 
-    updateProvinceID() {
-      window.RandomUniqueID((newProvinceID) => {
-        const provinceIDField = this.hiddenFields.find(
-          (field) => field.name === "ProvinceID"
+    updatedistrictID() {
+      window.RandomUniqueID((newdistrictID) => {
+        const districtIDField = this.hiddenFields.find(
+          (field) => field.name === "DistrictID"
         );
-        if (provinceIDField) {
-          provinceIDField.value = newProvinceID;
+        if (districtIDField) {
+          districtIDField.value = newdistrictID;
         }
       });
+    },
+
+    async fetchDistricts() {
+      try {
+        const response = await axios.get(`${window.SERVER_URL}FetchDistricts`);
+        this.Districts = response.data.records.map((district, index) => ({
+          ...district, // Spread all properties of the district object
+          color: this.colors[index % this.colors.length],
+          initials: district.DistrictName.split(" ")
+            .slice(0, 2)
+            .map((name) => name[0])
+            .join(""),
+        }));
+      } catch (error) {
+        this.error = "An error occurred while fetching the data.";
+        console.error(error);
+      }
     },
 
     async fetchProvinces() {
       try {
         const response = await axios.get(`${window.SERVER_URL}FetchProvinces`);
         this.provinces = response.data.records.map((province, index) => ({
-          ...province, // Spread all properties of the province object
+          ...province,
           color: this.colors[index % this.colors.length],
           initials: province.ProvinceName.split(" ")
             .slice(0, 2)
             .map((name) => name[0])
             .join(""),
         }));
+
+        // Update the 'ProvinceName' entry in autoCompleteData
+        const provinceObj = this.autoCompleteData.find(
+          (item) => item.name === "ProvinceID"
+        );
+        if (provinceObj) {
+          provinceObj.data = this.provinces.map((p) => p.ProvinceName);
+        } else {
+          // If the object doesn't exist, create a new one
+          this.autoCompleteData.push({
+            name: "ProvinceID",
+            data: this.provinces.map((p) => p.ProvinceName),
+          });
+        }
       } catch (error) {
         this.error = "An error occurred while fetching the data.";
         console.error(error);
@@ -251,7 +289,7 @@ export default {
         virtualScrollElement.scrollTop + virtualScrollElement.clientHeight >=
         virtualScrollElement.scrollHeight
       ) {
-        if (this.lastLoadedIndex < this.provinces.length) {
+        if (this.lastLoadedIndex < this.Districts.length) {
           this.lastLoadedIndex += 50;
         }
       }
