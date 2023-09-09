@@ -1,0 +1,66 @@
+   // async sendFormEngine(event) {
+    //   event.preventDefault(); // Prevent the default form submission behavior
+
+    //   const form = document.getElementById(this.formId);
+    //   const postRouteInput = form.elements["PostRoute"]; 
+
+    //   // const postRoute = postRouteInput ? postRouteInput.value : null;
+    //   // if (!postRoute) {
+    //   //   console.error("PostRoute not found in form");
+    //   //   return;
+    //   // }
+
+    //   const formData = new FormData(form);
+
+    //   formData.has("id") ? formData.set("id", sessionStorage.getItem("record_id")) : formData.append("id",  sessionStorage.getItem("record_id"));
+
+
+    //   for (let value of formData.values()) {
+    //     console.log(value);
+    //   }
+
+    //   console.log(window.SERVER_URL + 'MassUpdate');
+
+    //   try {
+    //     const response = await axios.post(window.SERVER_URL + 'MassUpdate', formData, {
+    //       headers: {
+    //         "Content-Type": "multipart/form-data",
+    //       },
+    //     });
+    //     console.log("Response:", response.data);
+
+    //     if (response.data[0].status) {
+    //       Swal.fire("Action Successful", response.data[0].status, "success");
+    //       this.$emit('updateSuccess');
+
+    //       console.log("My Error " + response.data[0].error_a);
+    //     } else if (response.data[0].error_a) {
+    //       // Handling the specific error you mentioned
+    //       Swal.fire("Error", response.data[0].error_a, "error");
+    //     } else {
+    //       // Log unexpected response structure to help diagnose the issue
+    //       console.error("Unexpected response structure:", response.data);
+    //     }
+    //   } catch (error) {
+    //     if (error.response && error.response.data.errors) {
+    //       const validationErrors = Object.values(error.response.data.errors)
+    //         .flat()
+    //         .join("\n");
+    //       Swal.fire({
+    //         title: "Validation Error!",
+    //         text: validationErrors,
+    //         icon: "error",
+    //         confirmButtonText: "OK",
+    //       });
+    //     } else {
+    //       // Handling any other catch-all errors
+    //       Swal.fire({
+    //         title: "Error!",
+    //         text: error.message || "An unexpected error occurred.",
+    //         icon: "error",
+    //         confirmButtonText: "OK",
+    //       });
+    //       console.error(error);
+    //     }
+    //   }
+    // },

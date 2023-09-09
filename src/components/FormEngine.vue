@@ -45,6 +45,17 @@
                 :items="field.options"
                 v-model="formValues[field.name]"
               ></v-autocomplete>
+
+              <div>
+                <input
+                  v-for="field in hiddenFields"
+                  :key="field.name"
+                  type="hidden"
+                  :name="field.name"
+                  :value="field.value"
+                  
+                />
+              </div>
             </v-col>
           </v-row>
           
@@ -147,10 +158,19 @@ export default {
       return chunks;
     },
     async sendFormEngine() {
-      console.log("Captured form values:", this.formValues);
+      // Create a new object to hold both the formValues and hiddenFields
+      const combinedFormValues = {
+        ...this.formValues,
+        ...this.hiddenFields.reduce((acc, field) => {
+          acc[field.name] = field.value;
+          return acc;
+        }, {}),
+      };
+
+      console.log("Captured form values including hidden fields:", combinedFormValues);
 
       try {
-        const response = await axios.post(window.SERVER_URL+'MassInsert', this.formValues, {
+        const response = await axios.post(window.SERVER_URL+'MassInsert', combinedFormValues, {
           headers: {
             "Content-Type": "application/json",
           },
@@ -166,6 +186,7 @@ export default {
         Swal.fire("Error", error.message, "error");
       }
     },
+  
   },
 };
 </script>

@@ -34,7 +34,7 @@
                 </v-avatar>
               </template>
               <v-list-item-title style="font-size: 12px"
-                >{{ item.districtName }}
+                >{{ item.DistrictName }}
               </v-list-item-title>
               <template v-slot:append>
                 <v-icon @click="showViewData(item.id)" class="btn-sm" color="red" end
@@ -85,6 +85,7 @@
 
   <UpdateEngine
     :RecordID="viewDataID"
+    :autoCompleteData="autoCompleteData"
     :districtId="somedistrictId"
     :tableName="tableName"
     :excludedColumns="excludedColumns"
@@ -121,13 +122,13 @@ export default {
     }).join(""),
     colors: window.COLORS,
     Districts: [],
-    FormID: "SubmitdistrictForm",
+    FormID: "SubmitDistrictForm",
     search: "",
     error: null,
     lastLoadedIndex: 50,
     dialog: false,
     tableName: "districts",
-    excludedColumns: ["created_at", "DistrictID", 'updated_at'],
+    excludedColumns: ["created_at", "DistrictID", "updated_at"],
     colGridSystem: { xs: 12, sm: 6, md: 4, lg: 3 },
     selectData: Object,
     selectElements: [], // You can add select elements if needed
@@ -157,7 +158,7 @@ export default {
 
     this.intervalId = setInterval(this.fetchDistricts, 2000); // 2000 ms = 2 seconds
 
-    console.log(sessionStorage.getItem("RandomUniqueID"));
+    // console.log(sessionStorage.getItem("RandomUniqueID"));
   },
 
   mounted() {
@@ -166,14 +167,16 @@ export default {
 
     const intervalId = setInterval(() => {
       this.$nextTick(() => {
-        const labels = document.querySelectorAll('.v-label.v-field-label');
+        const labels = document.querySelectorAll(".v-label.v-field-label");
         labels.forEach((label) => {
-          if (label.textContent.trim() === 'Province I D') {
-            label.textContent = 'Select Province Name';
+          if (label.textContent.trim() === "Province I D") {
+            label.textContent = "Select Province Name";
           }
         });
       });
     }, 1000); // Runs every 1 second
+
+    this.saveAutoCompleteDataToSession();
 
     // setTimeout(() => {
     //   clearInterval(intervalId); // Stops the interval after 7 seconds
@@ -197,6 +200,14 @@ export default {
   },
 
   methods: {
+    async saveAutoCompleteDataToSession() {
+      // Set an interval to run every 1000 milliseconds (1 second)
+      setInterval(async () => {
+        // Save the autoCompleteData into session storage
+        window.sessionStorage.setItem("AutoCompleteData", JSON.stringify(this.autoCompleteData));
+      }, 1000);
+    },
+
     showViewData(id) {
       return new Promise((resolve, reject) => {
         console.log(id);

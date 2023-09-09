@@ -1,68 +1,54 @@
 <template>
   <div>
-    <v-card class="pa-5" loading style="margin-top: 20px;" elevation="0">
+    <v-card class="pa-5" loading style="margin-top: 20px" elevation="0">
       <!-- <v-card-title>{{ headerText }}</v-card-title> -->
       <v-card-text>
-        <form :id="formId" >
+        <form @submit.prevent="sendFormEngine">
           <template v-for="(chunk, index) in chunks" :key="index">
             <div v-if="activeStep === index + 1">
               <v-row justify="space-around">
                 <v-col
-                  v-for="field in chunk"
-                  :key="field.name"
-                  :cols="
-                    field.type === 'text' ||
-                    field.type === 'select' ||
-                    field.type === 'autocomplete'
-                      ? '12'
-                      : '12'
-                  "
-                >
+                v-for="field in chunk"
+                :key="field.name"
+                :cols="
+                  field.type === 'text' ||
+                  field.type === 'select' ||
+                  field.type === 'autocomplete'
+                    ? '12'
+                    : '12'
+                "
+              >
                   <v-textarea
                     v-if="field.type === 'text'"
                     :name="field.name"
-                    :class="'x_' + field.name"
-                    :label="formatLabel(field.name)+'| '+getFieldValue(field.name)"
-                    :placeholder="formatLabel(field.name)"
-                    :value="getFieldValue(field.name)"
+                    :label="formatLabel(field.name)"
+                    v-model="formValues[field.name]"
                   ></v-textarea>
+                  
                   <v-text-field
-                    v-if="
-                      field.type === 'date' ||
-                      field.type === 'datetime' ||
-                      field.type === 'timestamp'
-                    "
+                    v-if="field.type === 'date'"
                     :name="field.name"
-                    :class="'x_' + field.name"
-                    :label="formatLabel(field.name)+'| '+getFieldValue(field.name)"
+                    :label="formatLabel(field.name)"
                     type="date"
-                    :placeholder="formatLabel(field.name)"
-                    :value="getFieldValue(field.name)"
+                    v-model="formValues[field.name]"
                   ></v-text-field>
+    
                   <v-text-field
                     v-else-if="field.type !== 'select' && field.type !== 'autocomplete'"
                     :name="field.name"
-                    :class="'x_' + field.name"
-                    :label="formatLabel(field.name)+'| '+getFieldValue(field.name)"
+                    :label="formatLabel(field.name)"
                     :type="field.type"
-                    :placeholder="formatLabel(field.name)"
-                   
+                    v-model="formValues[field.name]"
                   ></v-text-field>
+    
                   <v-autocomplete
-                    v-if="field.type === 'select'"
+                    v-if="field.type === 'select' || field.type === 'autocomplete'"
                     :name="field.name"
-                    :class="'x_' + field.name"
                     :label="formatLabel(field.name)"
                     :items="field.options"
+                    v-model="formValues[field.name]"
                   ></v-autocomplete>
-                  <v-autocomplete
-                    v-if="field.type === 'autocomplete'"
-                    :name="field.name"
-                    :class="'x_' + field.name"
-                    :label="formatLabel(field.name)"
-                    :items="field.options"
-                  ></v-autocomplete>
-
+    
                   <div>
                     <input
                       v-for="field in hiddenFields"
@@ -70,19 +56,17 @@
                       type="hidden"
                       :name="field.name"
                       :value="field.value"
+                      
                     />
                   </div>
                 </v-col>
               </v-row>
+              
               <v-row justify="space-around">
                 <v-btn color="blue-grey" v-if="index > 0" @click="activeStep--">
                   Previous
                 </v-btn>
-                <v-btn
-                  color="indigo"
-                  v-if="index < chunks.length - 1"
-                  @click="activeStep++"
-                >
+                <v-btn color="indigo" v-if="index < chunks.length - 1" @click="activeStep++">
                   Next
                 </v-btn>
                 <v-btn color="red" type="submit" v-if="index === chunks.length - 1">
@@ -90,7 +74,6 @@
                 </v-btn>
               </v-row>
             </div>
-            <!-- New code for hidden fields -->
           </template>
         </form>
       </v-card-text>
@@ -104,11 +87,10 @@ import Swal from "sweetalert2";
 // import { onMounted, nextTick } from 'vue';
 import { onMounted, nextTick } from "vue";
 
-
 const SERVER_URL = window.SERVER_URL;
 
 export default {
-    emits: ['updateSuccess'],
+  emits: ["updateSuccess"],
 
   props: {
     tableName: String,
@@ -138,6 +120,9 @@ export default {
       chunks: [],
       formId: `${this.FormID}Form`,
       activeStep: 1,
+      formValues: {},
+      // chunks: [],
+      // activeStep: 1,
     };
   },
   setup() {
@@ -170,13 +155,41 @@ export default {
     this.fetchColumns();
     this.fetchRecord(); // Call this new method to fetch the record
     this.setupFormSubmission();
+    this.formValues["id"] = sessionStorage.getItem("record_id");
+
+    console.log('this is the auto complete '+ this.autoCompleteData);
   },
   methods: {
-    async fetchRecord() {
-      // alert(this.id);
+    async fetchColumns() {
+      try {
+        const response = await axios.post(window.SERVER_URL+`getColumnDetails`, {
+          tableName: this.tableName,
+          excludedColumns: this.excludedColumns,
+        });
+        
+        let columns = response.data.columnData;
 
-      console.log("Update form TableName   " + this.tableName);
-      console.log("Update form id   " + sessionStorage.getItem("record_id"));
+        columns = columns.map((col) => {
+          const autoCompleteField = this.autoCompleteData.find(
+            (el) => el.name === col.name
+          );
+
+          if (autoCompleteField) {
+            return {
+              ...col,
+              type: 'autocomplete',
+              options: autoCompleteField.data,
+            };
+          }
+          return col;
+        });
+
+        this.chunks = this.chunkArray(columns, 3);
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    async fetchRecord() {
       try {
         const response = await axios.post(SERVER_URL + "FetchSpecificRecords", {
           TableName: this.tableName,
@@ -184,57 +197,89 @@ export default {
           excludedColumns: this.excludedColumns,
         });
 
-// console.log('This is the id supplied'+ sessionStorage.getItem("record_id"));
-
-        console.log(response.data);
-
         if (response.data.records && response.data.records.length > 0) {
-          this.record = response.data.records[0]; // Assuming the record is unique
+          this.record = response.data.records[0];
+          this.formValues["id"] = this.record.id || sessionStorage.getItem("record_id");
         } else {
-
           console.error("No record found");
         }
       } catch (error) {
         console.error(error);
       }
     },
+
+    async sendFormEngine() {
+      const combinedFormValues = {
+        ...this.formValues,
+        ...this.hiddenFields.reduce((acc, field) => {
+          acc[field.name] = field.value;
+          return acc;
+        }, {}),
+      };
+
+      // Explicitly setting 'id' field after spreading.
+      combinedFormValues.id = this.formValues["id"];
+
+      console.log(this.formValues["id"]);
+
+      try {
+        const response = await axios.post(SERVER_URL + "MassUpdate", combinedFormValues, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.data[0].status) {
+          console.log(response.data);
+          Swal.fire("Action Successful", response.data[0].status, "success");
+          this.$emit("updateSuccess");
+        } else if (response.data[0].error_a) {
+          Swal.fire("Error", response.data[0].error_a, "error");
+        }
+      } catch (error) {
+        Swal.fire("Error", error.message, "error");
+      }
+    },
+
     getFieldValue(fieldName) {
       return this.record[fieldName] || ""; // Return the value from the record, or an empty string if not found
     },
     async fetchFields() {
-  try {
-    const response = await axios.post(`${SERVER_URL}fetchFields`, {
-      formId: this.formId
-    });
+      try {
+        const response = await axios.post(`${SERVER_URL}fetchFields`, {
+          formId: this.formId,
+        });
 
-    let fields = response.data.fieldData;
+        let fields = response.data.fieldData;
 
-    if (Array.isArray(fields)) {
-      fields = fields.map(field => {
-        if (field.type === 'autocomplete') {
-          // Search for an autocomplete field matching the field name
-          const autoCompleteField = this.autoCompleteData.find(el => el.name === field.name);
+        if (Array.isArray(fields)) {
+          fields = fields.map((field) => {
+            if (field.type === "autocomplete") {
+              // Search for an autocomplete field matching the field name
+              const autoCompleteField = this.autoCompleteData.find(
+                (el) => el.name === field.name
+              );
 
-          // If found, add options
-          if (autoCompleteField) {
-            return {
-              ...field,
-              options: autoCompleteField.data
-            };
-          }
+              // If found, add options
+              if (autoCompleteField) {
+                return {
+                  ...field,
+                  options: autoCompleteField.data,
+                };
+              }
+            }
+            // If not found or if not an autocomplete field, return the field as is
+            return field;
+          });
+
+          this.fields = fields;
+        } else {
+          console.error("Received data is not an array");
         }
-        // If not found or if not an autocomplete field, return the field as is
-        return field;
-      });
-
-      this.fields = fields;
-    } else {
-      console.error("Received data is not an array");
-    }
-  } catch (error) {
-    console.error(error);
-  }
-},
+      } catch (error) {
+        console.error(error);
+      }
+    },
 
     isAutoCompleteColumn(columnName) {
       return (
@@ -269,72 +314,35 @@ export default {
       }
     },
 
-    async sendFormEngine(event) {
-      event.preventDefault(); // Prevent the default form submission behavior
+    // async sendFormEngine() {
+    //   // Create a new object to hold both the formValues and hiddenFields
+    //   const combinedFormValues = {
+    //     ...this.formValues,
+    //     ...this.hiddenFields.reduce((acc, field) => {
+    //       acc[field.name] = field.value;
+    //       return acc;
+    //     }, {}),
+    //   };
 
-      const form = document.getElementById(this.formId);
-      const postRouteInput = form.elements["PostRoute"]; 
+    //   console.log("Captured form values including hidden fields:", combinedFormValues);
 
-      // const postRoute = postRouteInput ? postRouteInput.value : null;
-      // if (!postRoute) {
-      //   console.error("PostRoute not found in form");
-      //   return;
-      // }
+    //   try {
+    //     const response = await axios.post(window.SERVER_URL+'MassUpdate', combinedFormValues, {
+    //       headers: {
+    //         "Content-Type": "application/json",
+    //       },
+    //     });
 
-      const formData = new FormData(form);
-
-      formData.has("id") ? formData.set("id", sessionStorage.getItem("record_id")) : formData.append("id",  sessionStorage.getItem("record_id"));
-
-
-      for (let value of formData.values()) {
-        console.log(value);
-      }
-
-      console.log(window.SERVER_URL + 'MassUpdate');
-
-      try {
-        const response = await axios.post(window.SERVER_URL + 'MassUpdate', formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
-        console.log("Response:", response.data);
-
-        if (response.data[0].status) {
-          Swal.fire("Action Successful", response.data[0].status, "success");
-          this.$emit('updateSuccess');
-
-          console.log("My Error " + response.data[0].error_a);
-        } else if (response.data[0].error_a) {
-          // Handling the specific error you mentioned
-          Swal.fire("Error", response.data[0].error_a, "error");
-        } else {
-          // Log unexpected response structure to help diagnose the issue
-          console.error("Unexpected response structure:", response.data);
-        }
-      } catch (error) {
-        if (error.response && error.response.data.errors) {
-          const validationErrors = Object.values(error.response.data.errors)
-            .flat()
-            .join("\n");
-          Swal.fire({
-            title: "Validation Error!",
-            text: validationErrors,
-            icon: "error",
-            confirmButtonText: "OK",
-          });
-        } else {
-          // Handling any other catch-all errors
-          Swal.fire({
-            title: "Error!",
-            text: error.message || "An unexpected error occurred.",
-            icon: "error",
-            confirmButtonText: "OK",
-          });
-          console.error(error);
-        }
-      }
-    },
+    //     if (response.data[0].status) {
+    //       Swal.fire("Action Successful", response.data[0].status, "success");
+    //       this.$emit('updateSuccess');
+    //     } else if (response.data[0].error_a) {
+    //       Swal.fire("Error", response.data[0].error_a, "error");
+    //     }
+    //   } catch (error) {
+    //     Swal.fire("Error", error.message, "error");
+    //   }
+    // },
   },
 };
 </script>
